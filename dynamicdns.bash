@@ -98,6 +98,30 @@ function saveConfiguration {
 	return 0
 }
 
+function getPublicIP {
+  local IP=""
+  local COMMANDS=(
+  	'dig @resolver1.opendns.com -4 myip.opendns.com +short'
+	'dig @ns1.google.com -4 o-o.myaddr.l.google.com TXT +short'
+	'curl http://ifconfig.me/ip'
+	'curl https://diagnostic.opendns.com/myip'
+	)
+  for i in "${COMMANDS[@]}; do
+  	IP=`$i`
+	if [ "$?" != "0" ]; then
+		IP=""
+	else
+		if [ -n "$IP" ]; then
+			echo "$IP"
+			return 0
+		fi
+	fi
+  done
+  if [ -z "$IP" ]; then
+  	return 1;
+  fi
+}
+
 VERBOSE="false"
 LISTONLY="false"
 #Get Command Line Options
@@ -225,7 +249,7 @@ if [ ! -n "$OPTIP" ]; then
 	if [ $VERBOSE = "true" ]; then
 		echo "No IP Address provided, obtaining public IP"
 	fi
-	IP=$(eval "dig +short myip.opendns.com @resolver1.opendns.com")
+	IP=`getPublicIP`
 	if [ $? -ne 0 ]; then
 		logStatus "error" "Failed to obtain current IP address"
 		exit 3
@@ -344,6 +368,7 @@ function addRecord {
                    dns-add_record \
                    record=$RECORD\&type=A\&value=$IP
 }
+
 
 # -------------------------------
 # Main execution
